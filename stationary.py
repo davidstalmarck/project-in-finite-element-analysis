@@ -47,6 +47,7 @@ class TemperetureFEA:
         cfv.showAndWait()
 
     def draw_selected_dofs(self, selected_dofs: list):
+        selected_dofs = [val - 1 for val in selected_dofs]
         selected_coords = self.coords[selected_dofs]
         cfv.draw_geometry(self.geom)
         cfv.drawMesh(coords=self.coords, edof=self.edof,
@@ -76,22 +77,22 @@ class TemperetureFEA:
             boundary_len = np.linalg.norm(
                 self.coords[elem_dofs[1] - 1] - self.coords[elem_dofs[0] - 1])
             # Element bounday conditions
-            fhe = -heat_flow * boundary_len * thickness / 2 * np.ones((2, 1))
+            fhe_val = -heat_flow * boundary_len * thickness / 2
             # Assemble into global boundary vector
-            self.fh[elem_dofs[0] - 1] += fhe[0]
-            self.fh[elem_dofs[1] - 1] += fhe[1]
+            self.fh[elem_dofs[0] - 1] += fhe_val
+            self.fh[elem_dofs[1] - 1] += fhe_val
 
         # Convection boundary conditions (vector and matrix)
         for elem in self.belems[self.convection]:
             # Same as for Neumann
             elem_dofs = elem["node-number-list"]
+
             boundary_len = np.linalg.norm(
                 self.coords[elem_dofs[1] - 1] - self.coords[elem_dofs[0] - 1])
-            fce = convection_coeff * env_temp * thickness * \
-                boundary_len * .5 * np.ones((2, 1))
+            fce_val = convection_coeff * env_temp * thickness * boundary_len / 2
             # Assemble into global fc
-            self.fc[elem_dofs[0] - 1] += fce[0]
-            self.fc[elem_dofs[1] - 1] += fce[1]
+            self.fc[elem_dofs[0] - 1] += fce_val
+            self.fc[elem_dofs[1] - 1] += fce_val
 
             # Element convection matrix
             common_value = convection_coeff * boundary_len * thickness
@@ -151,7 +152,6 @@ class TemperetureFEA:
             a, self.coords, self.edof, title="Temperature (Celsius)")
         cfv.colorbar()
         cfv.draw_mesh(self.coords, self.edof, self.dofs_per_node, self.el_type)
-
 
     def create_transient_matrix(self, thickness: float, c_copper: float, rho_copper: float, c_nylon: float, rho_nylon: float) -> None:
         """Assemble the tranient C-matrix using the plantml method"""

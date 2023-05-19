@@ -5,9 +5,9 @@ import calfem.geometry as cfg
 import calfem.mesh as cfm
 import calfem.vis_mpl as cfv
 import calfem.utils as cfu
-import logging
 import matplotlib.pyplot as plt
 from stationary import *
+from animation import animate
 
 """PARAMETERS"""
 # Geometric and boundary condition properties
@@ -63,44 +63,42 @@ def createGeometry():
     N = len(g.points)
     # Copper part, assign appropriate boundary condition markers
     for i in range(N):
-        if i == 0 or i == 2 or i == 9:
+        if i == 0 or i == 2 or i == 9 or i == 12:
             g.spline([i, (i + 1) % N], marker=isolated)
         elif i == 1:
             g.spline([i, (i + 1) % N], marker=heated)
-        elif i < 13:
+        elif i < 12:
             g.spline([i, (i + 1) % N], marker=convection)
         else:
             g.spline([i, (i + 1) % N])
     # Nylon part
-    # g.point([0, 0])
-    # g.spline([19, 0], marker=isolated)
-    # g.spline([19, 13], marker=isolated)
-    # # Define the different regions
+    g.point([0, 0])
+    g.spline([19, 0], marker=isolated)
+    g.spline([19, 13], marker=isolated)
+    # Define the different regions
     g.surface(list(range(19)), marker=copper)
-    # g.surface(list(range(13, 21)), marker=nylon)
+    g.surface(list(range(13, 21)), marker=nylon)
     return g
 
 
 if __name__ == "__main__":
     geom = createGeometry()
-    cfv.draw_geometry(geom)
-    cfv.show_and_wait()
     FEM = TemperetureFEA(geom, isolated, convection, heated,
                          copper, nylon, dofs_per_node, el_type, el_size_factor)
     FEM.create_mesh()
-    # FEM.create_matrices(h, env_temp, alpha_conv, Dcopper, Dnylon, thickness)
+    FEM.create_matrices(h, env_temp, alpha_conv, Dcopper, Dnylon, thickness)
     # FEM.show_mesh()
     # FEM.show_geometry()
     # a = FEM.solve_stationary_problem(show_solution=True)
 
-    FEM.draw_selected_dofs(FEM.bdofs[heated])
+    # FEM.draw_selected_dofs(FEM.bdofs[convection])
 
-    # FEM.create_transient_matrix(
-    #     thickness, c_copper, rho_copper, c_nylon, rho_nylon)
-    # a0 = np.ones((FEM.nDofs, 1)) * env_temp
-    # temps = FEM.implicit_integrator(100, 1., a0)
-
-    # FEM.draw_arbitrary_solution(temps[:, -1])
+    FEM.create_transient_matrix(
+        thickness, c_copper, rho_copper, c_nylon, rho_nylon)
+    a0 = np.ones((FEM.nDofs, 1)) * env_temp
+    temps = FEM.implicit_integrator(100, 1., a0)
+    animate(FEM, temps)
+    FEM.draw_arbitrary_solution(temps[:, 1])
 
     # for a in a_vecs:
     #     FEM.draw_arbitrary_solution(a)
