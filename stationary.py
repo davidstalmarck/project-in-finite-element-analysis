@@ -145,6 +145,14 @@ class TemperetureFEA:
         cfv.draw_mesh(self.coords, self.edof, self.dofs_per_node, self.el_type)
         cfv.show_and_wait()
 
+    def update_animation(self, a: np.array) -> None:
+        cfv.figure(fig_size=(10, 10))
+        cfv.draw_nodal_values_shaded(
+            a, self.coords, self.edof, title="Temperature (Celsius)")
+        cfv.colorbar()
+        cfv.draw_mesh(self.coords, self.edof, self.dofs_per_node, self.el_type)
+
+
     def create_transient_matrix(self, thickness: float, c_copper: float, rho_copper: float, c_nylon: float, rho_nylon: float) -> None:
         """Assemble the tranient C-matrix using the plantml method"""
         self.C = np.zeros((self.nDofs, self.nDofs))
