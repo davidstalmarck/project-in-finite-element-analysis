@@ -40,9 +40,7 @@ el_type = 2
 dofs_per_node = 1
 el_size_factor = .02
 
-if __name__ == "__main__":
-    selected_task = input("Enter task 'a', 'b' or 'c': ")
-
+def a(show_solution=True):
     """TASK A: STATIONARY TEMPERATURE DISTRIBUTION"""
     geom = createTempGeometry(L, copper, nylon, heated, convection, isolated)
     StatFEM = StatTempFEA(geom, isolated, convection, heated,
@@ -54,19 +52,16 @@ if __name__ == "__main__":
                             Dcopper, Dnylon, thickness)
 
     # Solve the statonary problem (K + Kc)a = fh + fc
-    a = StatFEM.solve_stationary_problem(show_solution=(selected_task == "a"))
+    a = StatFEM.solve_stationary_problem(show_solution=show_solution)
     # What is the maximum nodal temperature?
     max_stat_temp = max(a)
-    print(
-        f"Maximum stationary temperature: {float(max_stat_temp)} deg. Celsius")
+    if show_solution:
+        print(
+            f"Maximum stationary temperature: {float(max_stat_temp)} deg. Celsius")
+    return StatFEM, max_stat_temp
 
-    """TASK C: THERMAL EXPANSION"""
-    if selected_task == "c":
-        pass
-
-    if selected_task != "b":
-        exit()
-
+def b(animate= True):
+    StatFEM, max_stat_temp = a(show_solution=False)
     """TASK B: TRANSIENT HEATFLOW"""
     # Numerical integration parameters
     end_time = 80.
@@ -83,7 +78,19 @@ if __name__ == "__main__":
     print(f"Doing numerical integration, please hold tight!")
     temps = TransFEM.implicit_integrator(end_time, dt, init_temp)
     # Animate the solution
-    # animate(StatFEM, temps)
+    animate(StatFEM, temps)
     # Compute 90% of the maximum temperature
     time90 = TransFEM.compute_90_percent_of_max(max_stat_temp, temps, dt)
     print(f"Time to reach 90% of maximum: {time90} seconds")
+
+def c():
+    pass
+
+
+
+
+
+if __name__ == "__main__":
+    #a()
+    b()
+    #c()

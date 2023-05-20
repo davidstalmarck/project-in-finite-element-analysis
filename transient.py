@@ -9,8 +9,7 @@ import logging
 import matplotlib.pyplot as plt
 from plantml import plantml
 
-
-class TransientTempFEA:
+class TransientTempFEA():
     def __init__(self, K: np.array, Kc: np.array, f: np.array, nDofs: int, edof: np.array,
                  ex: np.array, ey: np.array, elementmarkers: np.array, copper_id: int, nylon_id: int) -> None:
         self.K, self.Kc, self.f = K, Kc, f

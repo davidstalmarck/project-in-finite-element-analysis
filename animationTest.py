@@ -40,18 +40,8 @@ def f():
 if __name__ == "__main__":
 
     a_vecs, FEM = f()
-    # FEM.draw_arbitrary_solution(a_vecs[:,0])
-    # exit()
-    #moviewriter = FileMovieWriter(...)
-    #moviewriter.setup(cal, 'my_movie.ext', dpi=100)
     for j in range(len(a_vecs)):
         FEM.update_animation(a_vecs[:, j])
         plt.plot()
         plt.pause(0.01)
-        # moviewriter.grab_frame()
-
-    # moviewriter.finish()
-    #im_ani = ArtistAnimation(cal, interval=50, repeat_delay=3000, blit=True)
-    #im_ani.save('im.m4v', writer=FFMpegFileWriter())
-    # ani = FuncAnimation(fig, FEM.update, frames=a_vecs, init_func=FEM.init, blit=True)
     plt.show()
