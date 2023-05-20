@@ -7,10 +7,10 @@ import calfem.vis_mpl as cfv
 import calfem.utils as cfu
 import logging
 import matplotlib.pyplot as plt
-from plantml import *
+from plantml import plantml
 
 
-class TemperetureFEA:
+class StatTempFEA:
     def __init__(self, geom: cfg.Geometry, isolated_id: int, convection_id: int, heated_id: int,
                  copper_id: int, nylon_id: int, dofs_per_node: int, el_type: int, el_size_factor: float) -> None:
         self.geom = geom
@@ -152,39 +152,3 @@ class TemperetureFEA:
             a, self.coords, self.edof, title="Temperature (Celsius)")
         cfv.colorbar()
         cfv.draw_mesh(self.coords, self.edof, self.dofs_per_node, self.el_type)
-
-    def create_transient_matrix(self, thickness: float, c_copper: float, rho_copper: float, c_nylon: float, rho_nylon: float) -> None:
-        """Assemble the tranient C-matrix using the plantml method"""
-        self.C = np.zeros((self.nDofs, self.nDofs))
-
-        for eltopo, elx, ely, marker in zip(self.edof, self.ex, self.ey, self.elementmarkers):
-            # Check material
-            if marker == self.copper:
-                c = c_copper
-                rho = rho_copper
-            elif marker == self.nylon:
-                c = c_nylon
-                rho = rho_nylon
-            else:
-                logging.warning("Potential error, no material found")
-
-            # Element C-matrix
-            Ce = plantml(elx, ely, thickness * c * rho)
-            # Assemble global C-matrix
-            cfc.assem(eltopo, self.C, Ce)
-
-    def implicit_integrator(self, end_time: float, step_size: float, a0: np.array) -> list[np.array]:
-        """Do implicit time integration on a given FE temperature problem"""
-
-        tt = np.arange(0, end_time, step_size)
-        temps = np.empty((self.nDofs, tt.size))
-        temps[:, 0] = np.reshape(a0, (self.nDofs))
-
-        for t in range(tt.size - 1):
-            current_temps = temps[:, t]
-            f_array = np.reshape(self.f, (self.nDofs))
-            next_temps = np.linalg.solve(
-                self.C + step_size * (self.K + self.Kc), np.dot(self.C, current_temps) + step_size * f_array)
-            temps[:, t + 1] = next_temps
-
-        return temps

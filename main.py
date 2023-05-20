@@ -6,8 +6,11 @@ import calfem.mesh as cfm
 import calfem.vis_mpl as cfv
 import calfem.utils as cfu
 import matplotlib.pyplot as plt
-from stationary import *
+# Our files
+from stationary import StatTempFEA
+from transient import TransientTempFEA
 from animation import animate
+from geometry import createTempGeometry
 
 """PARAMETERS"""
 # Geometric and boundary condition properties
@@ -37,68 +40,50 @@ el_type = 2
 dofs_per_node = 1
 el_size_factor = .02
 
-
-def createGeometry():
-    """Creating the geometry of our gripper"""
-    g = cfg.Geometry()
-    g.point([0, 0.3*L])  # point 0
-    g.point([0, 0.4*L])  # point 1
-    g.point([0, 0.5*L])  # point 2
-    g.point([0.1*L, 0.5*L])  # point 3
-    g.point([0.1*L, 0.4*L])  # point 3
-    g.point([0.4*L, 0.4*L])  # point 4
-    g.point([0.45*L, 0.35*L])  # point 5
-    g.point([0.45*L, 0.05*L])  # point 6
-    g.point([0.9*L, 0.3*L])  # point 7
-    g.point([L, 0.3*L])  # point 8
-    g.point([L, 0.25*L])  # point 9
-    g.point([0.9*L, 0.25*L])  # point 10
-    g.point([0.45*L, 0])
-    g.point([0.35*L, 0])
-    g.point([0.35*L, 0.3*L])
-    g.point([0.15*L, 0.3*L])
-    g.point([0.15*L, 0.15*L])  # point 15
-    g.point([0.1*L, 0.15*L])
-    g.point([0.1*L, 0.3*L])
-    N = len(g.points)
-    # Copper part, assign appropriate boundary condition markers
-    for i in range(N):
-        if i == 0 or i == 2 or i == 9 or i == 12:
-            g.spline([i, (i + 1) % N], marker=isolated)
-        elif i == 1:
-            g.spline([i, (i + 1) % N], marker=heated)
-        elif i < 12:
-            g.spline([i, (i + 1) % N], marker=convection)
-        else:
-            g.spline([i, (i + 1) % N])
-    # Nylon part
-    g.point([0, 0])
-    g.spline([19, 0], marker=isolated)
-    g.spline([19, 13], marker=isolated)
-    # Define the different regions
-    g.surface(list(range(19)), marker=copper)
-    g.surface(list(range(13, 21)), marker=nylon)
-    return g
-
-
 if __name__ == "__main__":
-    geom = createGeometry()
-    FEM = TemperetureFEA(geom, isolated, convection, heated,
-                         copper, nylon, dofs_per_node, el_type, el_size_factor)
-    FEM.create_mesh()
-    FEM.create_matrices(h, env_temp, alpha_conv, Dcopper, Dnylon, thickness)
+    selected_task = input("Enter task 'a', 'b' or 'c': ")
+
+    """TASK A: STATIONARY TEMPERATURE DISTRIBUTION"""
+    geom = createTempGeometry(L, copper, nylon, heated, convection, isolated)
+    StatFEM = StatTempFEA(geom, isolated, convection, heated,
+                          copper, nylon, dofs_per_node, el_type, el_size_factor)
+    StatFEM.create_mesh()
     # FEM.show_mesh()
     # FEM.show_geometry()
-    # a = FEM.solve_stationary_problem(show_solution=True)
+    StatFEM.create_matrices(h, env_temp, alpha_conv,
+                            Dcopper, Dnylon, thickness)
 
-    # FEM.draw_selected_dofs(FEM.bdofs[convection])
+    # Solve the statonary problem (K + Kc)a = fh + fc
+    a = StatFEM.solve_stationary_problem(show_solution=(selected_task == "a"))
+    # What is the maximum nodal temperature?
+    max_stat_temp = max(a)
+    print(
+        f"Maximum stationary temperature: {float(max_stat_temp)} deg. Celsius")
 
-    FEM.create_transient_matrix(
+    """TASK C: THERMAL EXPANSION"""
+    if selected_task == "c":
+        pass
+
+    if selected_task != "b":
+        exit()
+
+    """TASK B: TRANSIENT HEATFLOW"""
+    # Numerical integration parameters
+    end_time = 80.
+    dt = .01
+
+    TransFEM = TransientTempFEA(StatFEM.K, StatFEM.Kc, StatFEM.f, StatFEM.nDofs, StatFEM.edof,
+                                StatFEM.ex, StatFEM.ey, StatFEM.elementmarkers, StatFEM.copper, StatFEM.nylon)
+    # Calculate the C-matrix from the transient heatflow eq. C dot{a} + (K + Kc)a = fh + fc
+    TransFEM.create_transient_matrix(
         thickness, c_copper, rho_copper, c_nylon, rho_nylon)
-    a0 = np.ones((FEM.nDofs, 1)) * env_temp
-    temps = FEM.implicit_integrator(100, 1., a0)
-    animate(FEM, temps)
-    FEM.draw_arbitrary_solution(temps[:, 1])
-
-    # for a in a_vecs:
-    #     FEM.draw_arbitrary_solution(a)
+    # Initial temeprature is the environment temperature
+    init_temp = np.ones((TransFEM.nDofs, 1)) * env_temp
+    # The temperatures at each time point
+    print(f"Doing numerical integration, please hold tight!")
+    temps = TransFEM.implicit_integrator(end_time, dt, init_temp)
+    # Animate the solution
+    # animate(StatFEM, temps)
+    # Compute 90% of the maximum temperature
+    time90 = TransFEM.compute_90_percent_of_max(max_stat_temp, temps, dt)
+    print(f"Time to reach 90% of maximum: {time90} seconds")
