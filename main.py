@@ -60,7 +60,7 @@ def a(show_solution=True):
             f"Maximum stationary temperature: {float(max_stat_temp)} deg. Celsius")
     return StatFEM, max_stat_temp
 
-def b(animate= True):
+def b( do_animation = True):
     StatFEM, max_stat_temp = a(show_solution=False)
     """TASK B: TRANSIENT HEATFLOW"""
     # Numerical integration parameters
@@ -78,17 +78,14 @@ def b(animate= True):
     print(f"Doing numerical integration, please hold tight!")
     temps = TransFEM.implicit_integrator(end_time, dt, init_temp)
     # Animate the solution
-    animate(StatFEM, temps)
+    if do_animation:
+        animate(StatFEM, temps)
     # Compute 90% of the maximum temperature
     time90 = TransFEM.compute_90_percent_of_max(max_stat_temp, temps, dt)
     print(f"Time to reach 90% of maximum: {time90} seconds")
 
 def c():
     pass
-
-
-
-
 
 if __name__ == "__main__":
     #a()
